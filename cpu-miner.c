@@ -600,9 +600,17 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
 		memcpy(merkle_tree[1], merklebin, 32);
 		sha256d(merkle_tree[0], merkle_tree[0], 64);
 	}
+	
 	bin2hex(coinbaseid, merkle_tree[0], 32);
-	memrev(coinbaseid, 64);
 	printf("%s\n", coinbaseid);
+	// memcpy(coinbaseid, merkle_tree[0], 32);
+	// bin2hex(coinbaseid, coinbaseid, 32);
+	// printf("%s\n", coinbaseid);
+	// memcpy(coinbaseid, merkle_tree[0], 32);
+	// memrev(coinbaseid, 32);
+	// bin2hex(coinbaseid, coinbaseid, 32);
+	// printf("%s\n", coinbaseid);
+
 	// for (i = 0; i < tx_count; i++) {
 	// 	tmp = json_array_get(txa, i);
 	// 	const char *tx_hex = json_string_value(json_object_get(tmp, "data"));

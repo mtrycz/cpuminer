@@ -591,11 +591,10 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
     // https://docs.bitcoincashnode.org/doc/getblocktemplatelight/
 	for (i = 0; i < merkle_count; i++) {
 		const char *merkle = json_string_value(json_array_get(merklea, i));
-		printf("%s\n", merkle);
 		unsigned char merklebin[32];
 		unsigned char temphash[32];
+		
 		hex2bin(merklebin, merkle, 32);
-
 		memcpy(merkle_tree[1], merklebin, 32);
 		memrev(merkle_tree[1], 32);
 		

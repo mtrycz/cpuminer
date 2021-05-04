@@ -593,7 +593,7 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
 		const char *merkle = json_string_value(json_array_get(merklea, i));
 		unsigned char merklebin[32];
 		unsigned char temphash[32];
-		
+
 		hex2bin(merklebin, merkle, 32);
 		memcpy(merkle_tree[1], merklebin, 32);
 		memrev(merkle_tree[1], 32);
@@ -662,9 +662,6 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
 	memset(work->data + 19, 0x00, 52);
 	work->data[20] = 0x80000000;
 	work->data[31] = 0x00000280;
-	char data_str[2 * sizeof(work->data) + 1];
-	bin2hex(data_str, (unsigned char *)work->data, 80);
-	printf("%s\n", data_str);
 
 	if (unlikely(!jobj_binary(val, "target", target, sizeof(target)))) {
 		applog(LOG_ERR, "JSON invalid target");

@@ -346,7 +346,7 @@ json_t *json_rpc_call(CURL *curl, const char *url,
 	json_error_t err;
 	struct curl_slist *headers = NULL;
 	char curl_err_str[CURL_ERROR_SIZE];
-	long timeout = (flags & JSON_RPC_LONGPOLL) ? opt_timeout : 30;
+	long timeout = (flags & JSON_RPC_LONGPOLL) ? opt_timeout : 180;
 	struct header_info hi = {0};
 
 	all_data.headers = &hi;

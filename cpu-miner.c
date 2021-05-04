@@ -352,13 +352,13 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
 	int cbtx_size;
 	unsigned char *cbtx = NULL;
 	unsigned char *tx = NULL;
-	int tx_count, tx_size;
+	int tx_count, tx_size, merkle_count;
 	unsigned char txc_vi[9];
 	unsigned char (*merkle_tree)[32] = NULL;
 	bool coinbase_append = false;
 	bool submit_coinbase = false;
 	bool segwit = false;
-	json_t *tmp, *txa;
+	json_t *tmp, *txa, *merklea;
 	bool rc = false;
 
 	tmp = json_object_get(val, "rules");
@@ -419,22 +419,23 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
 	}
 
 	/* find count and size of transactions */
-	txa = json_object_get(val, "transactions");
-	if (!txa || !json_is_array(txa)) {
+	merklea = json_object_get(val, "merkle");
+	if (!merklea || !json_is_array(merklea)) {
 		applog(LOG_ERR, "JSON invalid transactions");
 		goto out;
 	}
-	tx_count = json_array_size(txa);
-	tx_size = 0;
-	for (i = 0; i < tx_count; i++) {
-		const json_t *tx = json_array_get(txa, i);
-		const char *tx_hex = json_string_value(json_object_get(tx, "data"));
-		if (!tx_hex) {
-			applog(LOG_ERR, "JSON invalid transactions");
-			goto out;
-		}
-		tx_size += strlen(tx_hex) / 2;
-	}
+	merkle_count = json_array_size(merklea);
+	// tx_count = json_array_size(txa);
+	// tx_size = 0;
+	// for (i = 0; i < tx_count; i++) {
+	// 	const json_t *tx = json_array_get(txa, i);
+	// 	const char *tx_hex = json_string_value(json_object_get(tx, "data"));
+	// 	if (!tx_hex) {
+	// 		applog(LOG_ERR, "JSON invalid transactions");
+	// 		goto out;
+	// 	}
+	// 	tx_size += strlen(tx_hex) / 2;
+	// }
 
 	/* build coinbase transaction */
 	tmp = json_object_get(val, "coinbasetxn");
@@ -582,62 +583,80 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
 	char *txs_end = work->txs + strlen(work->txs);
 
 	/* generate merkle root */
-	merkle_tree = malloc(32 * ((1 + tx_count + 1) & ~1));
-	size_t tx_buf_size = 32 * 1024;
-	tx = malloc(tx_buf_size);
+	merkle_tree = malloc(64);
+	// size_t tx_buf_size = 32 * 1024;
+	// tx = malloc(tx_buf_size);
 	sha256d(merkle_tree[0], cbtx, cbtx_size);
-	for (i = 0; i < tx_count; i++) {
-		tmp = json_array_get(txa, i);
-		const char *tx_hex = json_string_value(json_object_get(tmp, "data"));
-		const size_t tx_hex_len = tx_hex ? strlen(tx_hex) : 0;
-		const int tx_size = tx_hex_len / 2;
-		if (segwit) {
-			const char *txid = json_string_value(json_object_get(tmp, "txid"));
-			if (!txid || !hex2bin(merkle_tree[1 + i], txid, 32)) {
-				applog(LOG_ERR, "JSON invalid transaction txid");
-				goto out;
-			}
-			memrev(merkle_tree[1 + i], 32);
-		} else {
-			if (tx_size > tx_buf_size) {
-				free(tx);
-				tx_buf_size = tx_size * 2;
-				tx = malloc(tx_buf_size);
-			}
-			if (!tx_hex || !hex2bin(tx, tx_hex, tx_size)) {
-				applog(LOG_ERR, "JSON invalid transactions");
-				goto out;
-			}
-			sha256d(merkle_tree[1 + i], tx, tx_size);
-		}
-		if (!submit_coinbase) {
-			strcpy(txs_end, tx_hex);
-			txs_end += tx_hex_len;
-		}
+	char coinbaseid[32];
+	bin2hex(coinbaseid, merkle_tree[0], 32);
+	printf("%s\n", coinbaseid);
+
+    // https://docs.bitcoincashnode.org/doc/getblocktemplatelight/
+	for (i = 0; i < merkle_count; i++) {
+		const char *merkle = json_string_value(json_array_get(merklea, i));
+		printf("%s\n", merkle);
+		unsigned char merklebin[32];
+		hex2bin(merklebin, merkle, 32);
+		memcpy(merkle_tree[1], merklebin, 32);
+		sha256d(merkle_tree[0], merkle_tree[0], 64);
 	}
+	bin2hex(coinbaseid, merkle_tree[0], 32);
+	printf("%s\n", coinbaseid);
+	// for (i = 0; i < tx_count; i++) {
+	// 	tmp = json_array_get(txa, i);
+	// 	const char *tx_hex = json_string_value(json_object_get(tmp, "data"));
+	// 	const size_t tx_hex_len = tx_hex ? strlen(tx_hex) : 0;
+	// 	const int tx_size = tx_hex_len / 2;
+	// 	if (segwit) {
+	// 		const char *txid = json_string_value(json_object_get(tmp, "txid"));
+	// 		if (!txid || !hex2bin(merkle_tree[1 + i], txid, 32)) {
+	// 			applog(LOG_ERR, "JSON invalid transaction txid");
+	// 			goto out;
+	// 		}
+	// 		memrev(merkle_tree[1 + i], 32);
+	// 	} else {
+	// 		if (tx_size > tx_buf_size) {
+	// 			free(tx);
+	// 			tx_buf_size = tx_size * 2;
+	// 			tx = malloc(tx_buf_size);
+	// 		}
+	// 		if (!tx_hex || !hex2bin(tx, tx_hex, tx_size)) {
+	// 			applog(LOG_ERR, "JSON invalid transactions");
+	// 			goto out;
+	// 		}
+	// 		sha256d(merkle_tree[1 + i], tx, tx_size);
+	// 	}
+	// 	if (!submit_coinbase) {
+	// 		strcpy(txs_end, tx_hex);
+	// 		txs_end += tx_hex_len;
+	// 	}
+	// }
 	free(tx); tx = NULL;
-	n = 1 + tx_count;
-	while (n > 1) {
-		if (n % 2) {
-			memcpy(merkle_tree[n], merkle_tree[n-1], 32);
-			++n;
-		}
-		n /= 2;
-		for (i = 0; i < n; i++)
-			sha256d(merkle_tree[i], merkle_tree[2*i], 64);
-	}
+	// n = 1 + merkle_count;
+	// while (n > 1) {
+	// 	if (n % 2) {
+	// 		memcpy(merkle_tree[n], merkle_tree[n-1], 32);
+	// 		++n;
+	// 	}
+	// 	n /= 2;
+	// 	for (i = 0; i < n; i++)
+	// 		sha256d(merkle_tree[i], merkle_tree[2*i], 64);
+	// }
 
 	/* assemble block header */
 	work->data[0] = swab32(version);
 	for (i = 0; i < 8; i++)
 		work->data[8 - i] = le32dec(prevhash + i);
 	for (i = 0; i < 8; i++)
-		work->data[9 + i] = be32dec((uint32_t *)merkle_tree[0] + i);
+		work->data[9 + i] = le32dec((uint32_t *)merkle_tree[0] + i);
 	work->data[17] = swab32(curtime);
 	work->data[18] = le32dec(&bits);
 	memset(work->data + 19, 0x00, 52);
 	work->data[20] = 0x80000000;
 	work->data[31] = 0x00000280;
+	char data_str[2 * sizeof(work->data) + 1];
+	bin2hex(data_str, (unsigned char *)work->data, 80);
+	printf("%s\n", data_str);
 
 	if (unlikely(!jobj_binary(val, "target", target, sizeof(target)))) {
 		applog(LOG_ERR, "JSON invalid target");
@@ -646,13 +665,13 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
 	for (i = 0; i < ARRAY_SIZE(work->target); i++)
 		work->target[7 - i] = be32dec(target + i);
 
-	tmp = json_object_get(val, "workid");
+	tmp = json_object_get(val, "job_id");
 	if (tmp) {
 		if (!json_is_string(tmp)) {
 			applog(LOG_ERR, "JSON invalid workid");
 			goto out;
 		}
-		work->workid = strdup(json_string_value(tmp));
+		work->job_id = strdup(json_string_value(tmp));
 	}
 
 	/* Long polling */
@@ -753,14 +772,17 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			json_decref(val);
 			req = malloc(128 + 2*80 + strlen(work->txs) + strlen(params));
 			sprintf(req,
-				"{\"method\": \"submitblock\", \"params\": [\"%s%s\", %s], \"id\":1}\r\n",
-				data_str, work->txs, params);
+				"{\"method\": \"submitblocklight\", \"params\": [\"%s%s\", \"%s\"], \"id\":1}\r\n",
+				data_str, work->txs, work->job_id);
+			printf("%s", req);
 			free(params);
 		} else {
 			req = malloc(128 + 2*80 + strlen(work->txs));
+							"{\"method\": \"submitblock\", \"params\": [\"%s%s\", %s], \"id\":1}\r\n",
 			sprintf(req,
-				"{\"method\": \"submitblock\", \"params\": [\"%s%s\"], \"id\":1}\r\n",
-				data_str, work->txs);
+				"{\"method\": \"submitblocklight\", \"params\": [\"%s%s\", \"%s\"], \"id\":1}\r\n",
+				data_str, work->txs, work->job_id);
+			printf("%s", req);
 		}
 		val = json_rpc_call(curl, rpc_url, rpc_userpass, req, NULL, 0);
 		free(req);
@@ -826,10 +848,10 @@ static const char *getwork_req =
 #define GBT_RULES "[\"segwit\"]"
 
 static const char *gbt_req =
-	"{\"method\": \"getblocktemplate\", \"params\": [{\"capabilities\": "
+	"{\"method\": \"getblocktemplatelight\", \"params\": [{\"capabilities\": "
 	GBT_CAPABILITIES ", \"rules\": " GBT_RULES "}], \"id\":0}\r\n";
 static const char *gbt_lp_req =
-	"{\"method\": \"getblocktemplate\", \"params\": [{\"capabilities\": "
+	"{\"method\": \"getblocktemplatelight\", \"params\": [{\"capabilities\": "
 	GBT_CAPABILITIES ", \"rules\": " GBT_RULES ", \"longpollid\": \"%s\"}], \"id\":0}\r\n";
 
 static bool get_upstream_work(CURL *curl, struct work *work)

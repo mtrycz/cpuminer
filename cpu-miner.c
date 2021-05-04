@@ -596,7 +596,7 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
 		const char *merkle = json_string_value(json_array_get(merklea, i));
 		printf("%s\n", merkle);
 		unsigned char merklebin[32];
-		hex2bin(merklebin, merkle, 32);
+		hex2bin(merklebin, merkle, 64);
 		memcpy(merkle_tree[1], merklebin, 32);
 		sha256d(merkle_tree[0], merkle_tree[0], 64);
 	}

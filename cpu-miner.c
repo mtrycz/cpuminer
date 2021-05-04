@@ -649,7 +649,7 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
 	for (i = 0; i < 8; i++)
 		work->data[8 - i] = le32dec(prevhash + i);
 	for (i = 0; i < 8; i++)
-		work->data[9 + i] = le32dec((uint32_t *)merkle_tree[0] + i);
+		work->data[9 + i] = be32dec((uint32_t *)merkle_tree[0] + i);
 	work->data[17] = swab32(curtime);
 	work->data[18] = le32dec(&bits);
 	memset(work->data + 19, 0x00, 52);

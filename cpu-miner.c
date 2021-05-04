@@ -587,6 +587,7 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
 	// size_t tx_buf_size = 32 * 1024;
 	// tx = malloc(tx_buf_size);
 	sha256d(merkle_tree[0], cbtx, cbtx_size);
+	memrev(merkle_tree[0], 32);
 	char coinbaseid[32];
 	bin2hex(coinbaseid, merkle_tree[0], 32);
 	printf("%s\n", coinbaseid);

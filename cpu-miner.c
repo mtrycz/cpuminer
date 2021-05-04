@@ -587,14 +587,6 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
 	// size_t tx_buf_size = 32 * 1024;
 	// tx = malloc(tx_buf_size);
 	sha256d(merkle_tree[0], cbtx, cbtx_size);
-	unsigned char coinbaseid[32];
-	unsigned char hex[32];
-	memcpy(coinbaseid, merkle_tree[0], 32);
-	bin2hex(hex, coinbaseid, 32);
-	printf("%s\n", hex);
-	memrev(coinbaseid, 32);
-	bin2hex(hex, coinbaseid, 32);
-	printf("%s\n", hex);
 
     // https://docs.bitcoincashnode.org/doc/getblocktemplatelight/
 	for (i = 0; i < merkle_count; i++) {
@@ -611,8 +603,6 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
 		memcpy(merkle_tree[0], temphash, 32);
 	}
 	
-	bin2hex(hex, merkle_tree[0], 32);
-	printf("%s\n", hex);
 	// memcpy(coinbaseid, merkle_tree[0], 32);
 	// bin2hex(coinbaseid, coinbaseid, 32);
 	// printf("%s\n", coinbaseid);

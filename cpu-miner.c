@@ -592,14 +592,12 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
 	for (i = 0; i < merkle_count; i++) {
 		const char *merkle = json_string_value(json_array_get(merklea, i));
 		unsigned char merklebin[32];
-		unsigned char temphash[32];
 
 		hex2bin(merklebin, merkle, 32);
 		memcpy(merkle_tree[1], merklebin, 32);
 		memrev(merkle_tree[1], 32);
 		
-		sha256d(temphash, merkle_tree[0], 64);
-		memcpy(merkle_tree[0], temphash, 32);
+		sha256d(merkle_tree[0], merkle_tree[0], 64);
 	}
 	
 	// memcpy(coinbaseid, merkle_tree[0], 32);
